@@ -1,0 +1,21 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {"type": "timeseries", "title": "Request rate", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}, "targets": [{"expr": "sum(rate(notification_api_http_requests_total[5m]))", "legendFormat": "requests/sec"}]},
+    {"type": "timeseries", "title": "Error rate", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}, "targets": [{"expr": "sum(rate(notification_api_http_requests_total{status=~\"5..\"}[5m])) / sum(rate(notification_api_http_requests_total[5m]))", "legendFormat": "5xx ratio"}]},
+    {"type": "timeseries", "title": "Request latency", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}, "targets": [{"expr": "histogram_quantile(0.95, sum(rate(notification_api_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p95"}]},
+    {"type": "timeseries", "title": "HTTP status codes", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}, "targets": [{"expr": "sum by (status) (rate(notification_api_http_requests_total[5m]))", "legendFormat": "{{status}}"}]},
+    {"type": "stat", "title": "Process up", "gridPos": {"h": 5, "w": 6, "x": 0, "y": 16}, "targets": [{"expr": "process_start_time_seconds > 0", "legendFormat": "up"}]},
+    {"type": "timeseries", "title": "Notifications by status", "gridPos": {"h": 8, "w": 18, "x": 6, "y": 16}, "targets": [{"expr": "notification_api_notifications_by_status", "legendFormat": "{{status}}"}]},
+    {"type": "timeseries", "title": "Notifications created", "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24}, "targets": [{"expr": "sum by (channel) (rate(notification_api_notifications_created_total[5m]))", "legendFormat": "{{channel}}"}]}
+  ],
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["sparrowx", "notification-api"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "title": "SparrowX Notification API",
+  "uid": "sparrowx-notification-api",
+  "version": 1
+}
