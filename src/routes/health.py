@@ -10,6 +10,6 @@ def health():
     return {"status": "ok"}
 
 
-@router.get("/api/customers/health")
+@router.get("/api/notifications/health")
 def api_health():
     return {"status": "ok"}
