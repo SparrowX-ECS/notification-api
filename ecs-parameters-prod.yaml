@@ -1,0 +1,29 @@
+project:
+  name: sparrowx
+  environment: prod
+
+service:
+  name: notification-api
+
+image:
+  nameSpace: sparrowx/prod
+  repository: notificationapi
+
+container:
+  port: 8000
+  size: micro
+
+deployment:
+  desiredCount: 1
+
+loadBalancer:
+  pathPattern: /api/notifications/*
+  listenerRulePriority: 110
+  healthCheckPath: /health
+  smokeTestPath: /api/notifications/health
+
+database:
+  enabled: true
+  endpoint: ''
+  port: 5432
+  name: notificationdb
