@@ -8,7 +8,7 @@ from src.models import Notification, NotificationChannel, NotificationStatus
 from src.schemas import NotificationCreate, NotificationRead, NotificationStatusUpdate
 
 
-router = APIRouter(prefix="/api/notification", tags=["notifications"])
+router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 notifications_created = Counter(
     "notification_api_notifications_created_total",
     "Notifications created",

@@ -10,7 +10,7 @@ from sqlmodel import SQLModel, Session
 from src.database import create_database_engine, database_url_from_environment
 from src.models import Notification  # noqa: F401 - registers the table
 from src.routes.notifications import refresh_status_metrics, router as notifications_router
-
+from src.routes.health import router as health_router
 
 http_requests_total = Counter(
     "notification_api_http_requests_total",
@@ -78,15 +78,10 @@ def create_app(database_url: str | None = None, enable_metrics: bool = True) -> 
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    @application.get("/api/notification/health", tags=["health"])
-    def api_health() -> dict[str, str]:
-        return {"status": "ok"}
-
-    @application.get("/metrics", include_in_schema=False)
-    def metrics() -> Response:
-        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
-
+    application.include_router(health_router)
+    
     application.include_router(notifications_router)
+    
     return application
 
 
