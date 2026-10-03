@@ -1,46 +1,100 @@
 # Notification API
 
-The SparrowX Labs Notification API is a small FastAPI and SQLModel service owned by Emma Carter's Communications Team. It creates and tracks customer notifications in PostgreSQL; it does not deliver messages.
+Notification lifecycle service for the fictional SparrowX SaaS platform. This demonstration workload shows how a PostgreSQL-backed microservice is onboarded to AWS ECS/Fargate and deployed independently to `dev` and `prod`.
 
-## API contract
+## Service responsibilities
+
+- Create and list customer notifications.
+- Retrieve notifications and update their delivery status.
+- Persist data in the dedicated private RDS database `notificationdb`.
+- Expose health and Prometheus-compatible metrics endpoints.
+
+## API documentation
+
+FastAPI documentation is available at `/docs` (Swagger UI), `/redoc` (ReDoc), and `/openapi.json` (OpenAPI schema). The main API prefix is `/api/notifications`:
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `POST` | `/api/notification/` | Create a notification (`recipient`, `message`, `channel`) |
-| `GET` | `/api/notification/` | List notifications; optionally filter by `channel` or `status` |
-| `GET` | `/api/notification/{id}` | Retrieve one notification |
-| `POST` | `/api/notification/{id}/status` | Set status (`pending`, `sent`, or `failed`) |
+| `POST` | `/api/notifications/` | Create a notification |
+| `GET` | `/api/notifications/` | List/filter notifications |
+| `GET` | `/api/notifications/{notification_id}` | Retrieve a notification |
+| `POST` | `/api/notifications/{notification_id}/status` | Update notification status |
+| `GET` | `/health` | Container/target-group health check |
+| `GET` | `/api/notifications/health` | API smoke-test health check |
+| `GET` | `/metrics` | Prometheus metrics |
 
-Channels are `email`, `sms`, and `push`. New notifications start as `pending`. The generated contract is available at `/docs` and `/openapi.json`.
+Append these paths to the relevant environment base URL when testing a deployment.
+
+## Runtime environment variables
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `DB_HOST` | Yes | Private RDS PostgreSQL endpoint for `notificationdb`. |
+| `DB_PORT` | No | PostgreSQL port; defaults to `5432`. |
+| `DB_NAME` | Yes | Database name, normally `notificationdb`. |
+| `DB_USERNAME` | Yes | Database username injected from the service secret. |
+| `DB_PASSWORD` | Yes | Database password injected from the service secret. |
+| `CORS_ALLOW_ORIGINS` | No | Comma-separated browser origins; defaults to local development origins. |
 
 ## Local development
 
-From this directory:
-
 ```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements-dev.txt
-pytest -q
-uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+python -m pip install -r requirements-dev.txt
+pytest
+uvicorn src.main:app --reload --port 8000
 ```
 
-The application reads `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, and `DB_PASSWORD` from the environment.
+Open <http://localhost:8000/docs> after configuring the database variables.
 
-Operational endpoints:
+## CI/CD cycle
 
-- `GET /health` returns `{"status":"ok"}`.
-- `GET /metrics` exposes Prometheus-compatible HTTP and notification metrics.
+Pull requests use the shared Python/database workflow to detect relevant changes, run tests, build an immutable Git-SHA image, scan it with Trivy, and publish image metadata. A merge to `main` resolves that image, deploys it to `dev`, runs the configured smoke test, and publishes its tag and digest as the production candidate.
 
-## Docker
+The manually triggered production workflow requires `PROMOTE`, verifies the candidate digest, copies the exact image from the `dev` ECR namespace to `prod`, deploys it, smoke-tests it, and records the deployed metadata. Production is promoted, not rebuilt: this is **Build Once, Promote Many**.
 
-```bash
-docker build -t notification-api .
-docker run --rm --network sparrowx-local -p 8000:8000 \
-  -e DB_HOST=local-customer-postgres-db \
-  -e DB_PORT=5432 \
-  -e DB_NAME=notificationdb \
-  -e DB_USERNAME=postgres \
-  -e DB_PASSWORD=postgres \
-  notification-api
-```
+## Environments and deployment tracking
+
+`dev` is deployed automatically from `main`; `prod` is promoted manually after development validation. Each environment has its own ECS stack, ECR namespace, parameter file, URL, SSM metadata path, and GitHub deployment history. See [`ecs-parameters-dev.yaml`](ecs-parameters-dev.yaml) and [`ecs-parameters-prod.yaml`](ecs-parameters-prod.yaml).
+
+## Rollback options
+
+### Git revert
+
+Revert the problematic source or configuration commit and merge the revert. The normal pipeline will test, build, scan, and deploy the corrective commit.
+
+### Quicker manual image rollback
+
+1. Open the repository **Deployments** tab.
+2. Select the `prod` environment and open the desired previous deployment.
+3. Copy its deployed image tag.
+4. Open **Actions → Manual Rollback Production To Selected Image Tag → Run workflow**.
+5. Enter `ROLLBACK`, paste the image tag, and run the workflow.
+
+The workflow redeploys that immutable image to `prod`, runs the production smoke test, and publishes rollback metadata. ECS deployment circuit-breaker rollback is also enabled for unhealthy rolling deployments.
+
+## Repository variables
+
+| Variable | Description |
+| --- | --- |
+| `AWS_ACCOUNT_ID` | AWS account containing ECS, ECR, and environment resources. |
+| `AWS_REGION` | AWS region used by the workflows. |
+| `AWS_ROLE_NAME` | IAM role assumed through GitHub OIDC. |
+| `DEV_BASE_URL` | Development smoke-test origin: protocol plus domain only, such as `https://sparrowx-dev.example.com`. |
+| `DEV_DEPLOYED_PARAM_STORE_PATH` | SSM path for the image last deployed successfully to `dev`. |
+| `PROD_BASE_URL` | Production smoke-test origin: protocol plus domain only. |
+| `PROD_CANDIDATE_PARAM_STORE_PATH` | SSM path for the candidate published after development smoke tests. |
+| `PROD_DEPLOYED_PARAM_STORE_PATH` | SSM path for the image last deployed successfully to `prod`. |
+
+The smoke-test workflow appends the configured path to each base URL.
+
+## Container and deployment configuration
+
+- Container port: `8000`.
+- ALB path: `/api/notifications/*`.
+- Health check: `/health`.
+- Smoke-test path: `/api/notifications/health`.
+- Database: enabled in both environments.
+
+## License
+
+This is a proprietary portfolio project. It is publicly viewable but not open source. All rights are reserved. See [LICENSE.md](LICENSE.md).
