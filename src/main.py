@@ -74,6 +74,10 @@ def create_app(database_url: str | None = None, enable_metrics: bool = True) -> 
     if enable_metrics:
         application.add_middleware(MetricsMiddleware)
 
+    @application.get("/metrics", tags=["system"], include_in_schema=False)
+    def metrics() -> Response:
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
     @application.get("/health", tags=["health"])
     def health() -> dict[str, str]:
         return {"status": "ok"}
