@@ -16,6 +16,10 @@ async def test_health_and_api_documentation(client: AsyncClient) -> None:
     assert openapi.status_code == 200
     assert "/api/notifications/{notification_id}/status" in openapi.json()["paths"]
 
+    routed_openapi = await client.get("/api/notifications/openapi.json")
+    assert routed_openapi.status_code == 200
+    assert routed_openapi.json()["paths"] == openapi.json()["paths"]
+
 
 @pytest.mark.anyio
 async def test_notification_lifecycle_and_filters(client: AsyncClient) -> None:

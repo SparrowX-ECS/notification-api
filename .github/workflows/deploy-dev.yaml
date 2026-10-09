@@ -70,6 +70,7 @@ jobs:
     with:
       runtime: python
       base-url: ${{ vars.DEV_BASE_URL }}
+      api-spec-path: /api/notifications/openapi.json
       test-path: api-tests/dev
       test-command: pytest -q api-tests/dev
       requirements-file: requirements-dev.txt
