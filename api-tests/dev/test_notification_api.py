@@ -72,3 +72,13 @@ def test_notification_api_rejects_invalid_requests() -> None:
             json={"status": "sent"},
         )
         assert unknown_status.status_code == 404, unknown_status.text
+
+
+def test_routed_openapi_contains_notification_routes() -> None:
+    with client() as api:
+        response = api.get("/api/notifications/openapi.json")
+
+    assert response.status_code == 200, response.text
+    paths = response.json()["paths"]
+    assert "/api/notifications/" in paths
+    assert "/api/notifications/{notification_id}" in paths
