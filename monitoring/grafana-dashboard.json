@@ -1,21 +1,110 @@
 {
   "annotations": {"list": []},
   "editable": true,
+  "graphTooltip": 1,
   "panels": [
-    {"type": "timeseries", "title": "Request rate", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}, "targets": [{"expr": "sum(rate(notification_api_http_requests_total[5m]))", "legendFormat": "requests/sec"}]},
-    {"type": "timeseries", "title": "Error rate", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}, "targets": [{"expr": "sum(rate(notification_api_http_requests_total{status=~\"5..\"}[5m])) / sum(rate(notification_api_http_requests_total[5m]))", "legendFormat": "5xx ratio"}]},
-    {"type": "timeseries", "title": "Request latency", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}, "targets": [{"expr": "histogram_quantile(0.95, sum(rate(notification_api_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "p95"}]},
-    {"type": "timeseries", "title": "HTTP status codes", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}, "targets": [{"expr": "sum by (status) (rate(notification_api_http_requests_total[5m]))", "legendFormat": "{{status}}"}]},
-    {"type": "stat", "title": "Process up", "gridPos": {"h": 5, "w": 6, "x": 0, "y": 16}, "targets": [{"expr": "process_start_time_seconds > 0", "legendFormat": "up"}]},
-    {"type": "timeseries", "title": "Notifications by status", "gridPos": {"h": 8, "w": 18, "x": 6, "y": 16}, "targets": [{"expr": "notification_api_notifications_by_status", "legendFormat": "{{status}}"}]},
-    {"type": "timeseries", "title": "Notifications created", "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24}, "targets": [{"expr": "sum by (channel) (rate(notification_api_notifications_created_total[5m]))", "legendFormat": "{{channel}}"}]}
+    {
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{"expr": "sum(rate(notification_api_http_requests_total[5m]))", "legendFormat": "requests/sec", "refId": "A"}],
+      "title": "Request rate",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{"expr": "sum(rate(notification_api_http_requests_total{status=~\"4..|5..\"}[5m])) / clamp_min(sum(rate(notification_api_http_requests_total[5m])), 1e-9)", "legendFormat": "error ratio", "refId": "A"}],
+      "title": "Error ratio",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "id": 3,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le) (rate(notification_api_http_request_duration_seconds_bucket[5m])))", "legendFormat": "p95", "refId": "A"},
+        {"expr": "histogram_quantile(0.50, sum by (le) (rate(notification_api_http_request_duration_seconds_bucket[5m])))", "legendFormat": "p50", "refId": "B"}
+      ],
+      "title": "Request latency",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "id": 4,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{"expr": "sum by (status) (rate(notification_api_http_requests_total[5m]))", "legendFormat": "HTTP {{status}}", "refId": "A"}],
+      "title": "HTTP status rate",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "red"}, {"color": "green", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 16},
+      "id": 5,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "max(up{service=\"notification-api\"})", "legendFormat": "up", "refId": "A"}],
+      "title": "Notification API up",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 18, "x": 6, "y": 16},
+      "id": 6,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{"expr": "notification_api_notifications_by_status", "legendFormat": "{{status}}", "refId": "A"}],
+      "title": "Notifications by status",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+      "id": 7,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{"expr": "sum by (channel) (rate(notification_api_notifications_created_total[5m]))", "legendFormat": "{{channel}}", "refId": "A"}],
+      "title": "Notifications created by channel",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
+      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 24},
+      "id": 8,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum(process_resident_memory_bytes{service=\"notification-api\"})", "legendFormat": "resident memory", "refId": "A"}],
+      "title": "Process resident memory",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 24},
+      "id": 9,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "time() - max(process_start_time_seconds{service=\"notification-api\"})", "legendFormat": "uptime", "refId": "A"}],
+      "title": "Process uptime",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 29},
+      "id": 10,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{"expr": "sum by (path) (rate(notification_api_http_requests_total[5m]))", "legendFormat": "{{path}}", "refId": "A"}],
+      "title": "Request rate by path",
+      "type": "timeseries"
+    }
   ],
+  "refresh": "15s",
   "schemaVersion": 39,
   "style": "dark",
   "tags": ["sparrowx", "notification-api"],
   "templating": {"list": []},
   "time": {"from": "now-6h", "to": "now"},
+  "timezone": "browser",
   "title": "SparrowX Notification API",
   "uid": "sparrowx-notification-api",
-  "version": 1
+  "version": 2
 }
