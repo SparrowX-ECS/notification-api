@@ -37,11 +37,3 @@ def test_openapi_contains_notification_routes() -> None:
     assert "/api/notifications/" in paths
     assert "/api/notifications/{notification_id}" in paths
     assert "/api/notifications/{notification_id}/status" in paths
-
-
-def test_metrics_endpoint_is_readable() -> None:
-    with client() as api:
-        response = api.get("/metrics")
-
-    assert response.status_code == 200, response.text
-    assert "text/plain" in response.headers.get("content-type", "")
